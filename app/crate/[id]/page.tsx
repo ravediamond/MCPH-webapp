@@ -172,10 +172,13 @@ export default function CratePage() {
           updateTimeRemaining(data.expiresAt);
           timer = setInterval(() => updateTimeRemaining(data.expiresAt), 60000);
         }
-        if (!data.accessHistory) {
-          generateMockAccessStats(data.downloadCount || 0);
-        } else {
+        if (data.accessHistory) {
           calculateAccessStats(data.accessHistory);
+        } else {
+          setAccessStats({ today: 0, week: 0, month: 0 });
+          if (fileInfo) {
+            setFileInfo({ ...fileInfo, accessHistory: [], viewCount: 0 });
+          }
         }
       } catch (err: any) {
         setError(err.message || "An error occurred");
@@ -213,12 +216,12 @@ export default function CratePage() {
             setFileInfo((prev) =>
               prev
                 ? {
-                    ...prev,
-                    description:
-                      (prev.description || "") +
-                      (prev.description ? " • " : "") +
-                      "Contains Mermaid diagram",
-                  }
+                  ...prev,
+                  description:
+                    (prev.description || "") +
+                    (prev.description ? " • " : "") +
+                    "Contains Mermaid diagram",
+                }
                 : null,
             );
           }
@@ -227,42 +230,6 @@ export default function CratePage() {
         .finally(() => setContentLoading(false));
     }
   }, [fileInfo, isTextFile, checkIfMermaidDiagram]);
-
-  // In a real app, this would come from server analytics
-  const generateMockAccessStats = (downloadCount: number) => {
-    const today = Math.floor(downloadCount * 0.2) || 1;
-    const week = Math.floor(downloadCount * 0.6) || 3;
-    const month = downloadCount;
-
-    setAccessStats({
-      today,
-      week,
-      month,
-    });
-
-    // Generate mock access history data (last 7 days)
-    const mockHistory = [];
-    const now = new Date();
-
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(now.getDate() - i);
-      const count =
-        i === 0 ? today : Math.floor(Math.random() * (week / 7) * 1.5);
-
-      mockHistory.push({
-        date: date.toISOString().split("T")[0],
-        count,
-      });
-    }
-
-    if (fileInfo) {
-      setFileInfo({
-        ...fileInfo,
-        accessHistory: mockHistory,
-      });
-    }
-  };
 
   const calculateAccessStats = (history: { date: string; count: number }[]) => {
     const now = new Date();
@@ -558,19 +525,19 @@ export default function CratePage() {
 
   const daysUntilExpiry = expiryDate
     ? Math.max(
-        0,
-        Math.ceil(
-          (expiryDate.getTime() - new Date().getTime()) / (1000 * 3600 * 24),
-        ),
-      )
+      0,
+      Math.ceil(
+        (expiryDate.getTime() - new Date().getTime()) / (1000 * 3600 * 24),
+      ),
+    )
     : null;
 
   // Prepare usage chart data from access history
   const usageChartData = fileInfo.accessHistory
     ? fileInfo.accessHistory.map((entry) => ({
-        label: entry.date.split("-").slice(1).join("/"), // Format as MM/DD
-        value: entry.count,
-      }))
+      label: entry.date.split("-").slice(1).join("/"), // Format as MM/DD
+      value: entry.count,
+    }))
     : [];
 
   return (
@@ -703,14 +670,14 @@ export default function CratePage() {
               {(isTextFile(fileInfo.contentType) ||
                 isMermaidDiagram ||
                 isImageFile(fileInfo.contentType)) && (
-                <button
-                  onClick={() => setShowPreview(!showPreview)}
-                  className="flex items-center justify-center px-3 py-1.5 bg-gray-100 text-sm text-gray-700 rounded hover:bg-gray-200 transition-colors ml-auto"
-                >
-                  <FaEye className="mr-1" />{" "}
-                  {showPreview ? "Hide Preview" : "View Content"}
-                </button>
-              )}
+                  <button
+                    onClick={() => setShowPreview(!showPreview)}
+                    className="flex items-center justify-center px-3 py-1.5 bg-gray-100 text-sm text-gray-700 rounded hover:bg-gray-200 transition-colors ml-auto"
+                  >
+                    <FaEye className="mr-1" />{" "}
+                    {showPreview ? "Hide Preview" : "View Content"}
+                  </button>
+                )}
               <button
                 onClick={() => setShowResetExpiry(true)}
                 className="flex items-center justify-center px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 border border-blue-700 font-semibold shadow transition-colors"
